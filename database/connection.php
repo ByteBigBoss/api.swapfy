@@ -21,6 +21,26 @@ class Database{
       return $resultset;
   }
 
+  public static function validatePostData($tableName, $postData, $searchColumns){
+
+    $searchColumnsString = "'" . implode("','", $searchColumns) . "'";
+
+    $result = self::search("SHOW COLUMNS FROM `".$tableName."` WHERE `Field` IN (".$searchColumnsString.")");
+    $columns = [];
+    while($row = $result->fetch_assoc()){
+      $columns[] = $row['Field'];
+    }
+    
+
+    foreach ($columns as $column){
+      if(!isset($postData[$column]) || empty($postData[$column])){
+        return false;
+      }
+    }
+    return true;
+
+  }
+
 }
 
 ?>

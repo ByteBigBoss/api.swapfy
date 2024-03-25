@@ -45,13 +45,28 @@ class Route {
 
             // Check if the method exists in the class
             if (method_exists($classInstance, $method)) {
-                // Call the method
+               // Extract request body data if it's a POST request
+               if ($requestType === 'POST') {
+                $requestData = json_decode(file_get_contents('php://input'), true);
+
+                // Call the method and pass the request body data
+                try {
+                    $classInstance->$method($requestData);
+                } catch (Exception $e) {
+                    // Print out any errors
+                    echo "Error executing callback: " . $e->getMessage();
+                }
+            } else {
+                // Call the method without request body data for other request types
                 try {
                     $classInstance->$method();
                 } catch (Exception $e) {
                     // Print out any errors
                     echo "Error executing callback: " . $e->getMessage();
                 }
+            }
+
+                
             } else {
                 // Method does not exist
                 echo "500 Internal Server Error: Method not found";
