@@ -25,15 +25,15 @@ class UserController
         $checkUsername = Database::search("SELECT * FROM `user` WHERE `username`='" . $username . "'");
         $check_num = $checkUsername->num_rows;
 
-        if (!strlen($fname > 45)) {
+        if (!strlen($fname) > 45) {
           echo ("First Name Must Contain LOWER THAN 45 characters.");
-        } else if (!strlen($lname > 45)) {
+        } else if (!strlen($lname) > 45) {
           echo ("Last Name Must Contain LOWER THAN 45 characters.");
-        } else if (!strlen($username > 50)) {
+        } else if (!strlen($username) > 50) {
           echo ("Username Must Contain LOWER THAN 45 characters.");
         } else if ($check_num > 0) {
           echo ("Username Already Exists.");
-        } else if (!strlen($email > 100)) {
+        } else if (!strlen($email) > 100) {
           echo ("Email Address must Contain LOWER THAN 100 characters.");
         } else if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
           echo ("Invalid Email Address.");
@@ -71,7 +71,7 @@ class UserController
   public function login($request)
   {
 
-    if($request !== null){
+    if ($request !== null) {
 
       $email = $request["email"];
       $password = $request["password"];
@@ -80,12 +80,12 @@ class UserController
       $tableName = "user";
       $searchColumns = ['email', 'password'];
 
-      if(Database::validatePostData($tableName, $request, $searchColumns)){
+      if (Database::validatePostData($tableName, $request, $searchColumns)) {
 
         $obj = new stdClass();
-       
 
-        if (!strlen($email > 100)) {
+
+        if (!strlen($email) > 100) {
           $obj->msg = "Email Address must Contain LOWER THAN 100 characters.";
           echo json_encode($obj);
         } else if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
@@ -94,45 +94,207 @@ class UserController
         } else if (strlen($password) < 5 || strlen($password) > 20) {
 
           $obj->msg = "Password Must Contain 5 to 20 Characters.";
-            echo json_encode($obj);
+          echo json_encode($obj);
         } else {
 
-          $rs = Database::search("SELECT * FROM `user` WHERE `email`='".$email."' AND `password`='".$password."'");
+          $rs = Database::search("SELECT * FROM `user` WHERE `email`='" . $email . "' AND `password`='" . $password . "'");
           $row = $rs->num_rows;
 
-          if($row == 1){
+          if ($row == 1) {
 
             $data = $rs->fetch_assoc();
 
-           
 
-            if($rememberme == "true"){
+
+            if ($rememberme == "true") {
               $obj->msg = "success";
               $obj->rememberme = "true";
               $obj->user = $data;
               echo json_encode($obj);
-
-            }else if($rememberme == "remember"){
+            } else if ($rememberme == "remember") {
               $obj->msg = "success";
               $obj->rememberme = "remember";
               echo json_encode($obj);
-            }else{
+            } else {
               $obj->msg = "success";
-               $obj->rememberme = "false";
+              $obj->rememberme = "false";
               $obj->user = $data;
               echo json_encode($obj);
             }
+          } else {
+            $obj->msg = "Invalid Email or Password";
+            echo json_encode($obj);
+          }
+        }
+      } else {
+        echo "Error: Invalid POST data";
+      }
+    } else {
+      echo "Request faild: Null Data Object";
+    }
+  }
 
-          }else{
-            echo ("Invalid Email or Password");
+  public function saveOTP($request)
+  {
+    if ($request !== null) {
+
+      $email = $request["email"];
+      $otp = $request["verify_code"];
+
+      $tableName = "user";
+      $searchColumns = ['email', 'verify_code'];
+
+
+      if (Database::validatePostData($tableName, $request, $searchColumns)) {
+
+        $obj = new stdClass();
+
+        if (!strlen($email) > 100) {
+          $obj->msg = "Email Address must Contain LOWER THAN 100 characters.";
+          echo json_encode($obj);
+        } else if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+          $obj->msg = "Invalid Email Address.";
+          echo json_encode($obj);
+        } else if (!strlen($otp) === 6) {
+          $obj->msg = "Invalid OTP.";
+          echo json_encode($obj);
+        } else {
+
+          $rs = Database::search("SELECT * FROM `user` WHERE `email`='" . $email . "'");
+          $row = $rs->num_rows;
+
+          if ($row == 1) {
+
+            Database::iud("UPDATE `user` SET `verify_code`='" . $otp . "'");
+            $obj->msg = "success";
+            $obj->otp = $otp;
+            echo json_encode($obj);
+          } else {
+            $obj->msg = "No user found with this email address.";
+            echo json_encode($obj);
+          }
+        }
+      } else {
+        echo "Error: Invalid POST data";
+      }
+    } else {
+      echo "Request faild: Null Data Object";
+    }
+  }
+
+
+
+  public function checkOTP($request)
+  {
+    if ($request !== null) {
+
+      $email = $request["email"];
+      $otp = $request["verify_code"];
+
+
+      $tableName = "user";
+      $searchColumns = ['email', 'verify_code'];
+
+
+      if (Database::validatePostData($tableName, $request, $searchColumns)) {
+
+        $obj = new stdClass();
+
+        if (!strlen($email) > 100) {
+          $obj->msg = "Email Address must Contain LOWER THAN 100 characters.";
+          echo json_encode($obj);
+        } else if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+          $obj->msg = "Invalid Email Address.";
+          echo json_encode($obj);
+        } else if (!strlen($otp) === 6) {
+          $obj->msg = "Invalid OTP.";
+          echo json_encode($obj);
+        } else {
+
+          $rs = Database::search("SELECT * FROM `user` WHERE `email`='" . $email . "'");
+          $row = $rs->num_rows;
+
+          if ($row == 1) {
+
+            $userData = $rs->fetch_assoc();
+
+            if ($userData["verify_code"] === $otp) {
+
+              $obj->msg = "success";
+              echo json_encode($obj);
+
+            } else {
+              $obj->msg = "Invalid OTP";
+              echo json_encode($obj);
+            }
+
+          } else {
+            $obj->msg = "No user found with this email address.";
+            echo json_encode($obj);
+          }
+        }
+      } else {
+        echo "Error: Invalid POST data";
+      }
+    } else {
+      echo "Request faild: Null Data Object";
+    }
+  }
+
+
+  public function changePassword($request)
+  {
+
+    if ($request !== null) {
+
+      $email = $request["email"];
+      $password = $request["password"];
+
+      $tableName = "user";
+      $searchColumns = ['email', 'password'];
+
+
+      if (Database::validatePostData($tableName, $request, $searchColumns)) {
+
+        $obj = new stdClass();
+
+        if (!strlen($email) > 100) {
+          $obj->msg = "Email Address must Contain LOWER THAN 100 characters.";
+          echo json_encode($obj);
+        } else if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+          $obj->msg = "Invalid Email Address.";
+          echo json_encode($obj);
+        }else if (strlen($password) < 5 || strlen($password) > 20) {
+          $obj->msg = "Password Must Contain 5 to 20 Characters.";
+          echo json_encode($obj);
+        } else {
+
+          $rs = Database::search("SELECT * FROM `user` WHERE `email`='" . $email . "'");
+          $row = $rs->num_rows;
+
+          if ($row == 1) {
+
+            Database::iud("UPDATE `user` SET `password`='" . $password . "'");
+            $obj->msg = "success";
+            echo json_encode($obj);
+
+          } else {
+            $obj->msg = "No user found with this email address.";
+            echo json_encode($obj);
           }
 
         }
 
+      }else{
+        echo "Error: Invalid POST data";
       }
 
+    } else {
+      echo "Request faild: Null Data Object";
     }
+
   }
+
 
   public function getUser()
   {
@@ -146,5 +308,3 @@ class UserController
     }
   }
 }
-
-?>
