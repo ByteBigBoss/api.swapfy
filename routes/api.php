@@ -9,10 +9,7 @@ include "route.php";
 include "../app/controllers/user/UserController.php";
 
 
-// Define routes
-// Route::get('/api', [UserController::class, 'registerUser']);
-// Route::get('/api/user', [UserController::class, 'getUser']);
-
+// Define routes ------------------------------>>
 
 //http://localhost/api.swapfy/routes/api/login
 Route::post('/api/login', [UserController::class, 'login']);
@@ -26,12 +23,22 @@ Route::post('/api/verify', [UserController::class, 'saveOTP']);
 //http://localhost/api.swapfy/routes/api/check-otp
 Route::post('/api/check-otp', [UserController::class, 'checkOTP']);
 
+//http://localhost/api.swapfy/routes/api/forgot-password
+Route::post('/api/forgot-password', [UserController::class, 'forgotPassword']);
+
 //http://localhost/api.swapfy/routes/api/change-password
 Route::post('/api/change-password', [UserController::class, 'changePassword']);
 
+//http://localhost/api.swapfy/routes/api/change-email
+Route::post('/api/change-email', [UserController::class, 'changeEmail']);
 
 
-// Handle the current request
+
+
+
+
+
+// Handle the current request --------------------------------->>
 $requestURL = Request::getRequest();
 $requestType = Request::getRequestType();
 Route::handle($requestURL, $requestType);

@@ -75,6 +75,8 @@ class UserController
 
       $email = $request["email"];
       $password = $request["password"];
+
+
       $rememberme = $request["rememberme"];
 
       $tableName = "user";
@@ -104,9 +106,26 @@ class UserController
 
             $data = $rs->fetch_assoc();
 
+            $cookie = Database::search("SELECT * FROM `cookies` WHERE `user_id` IN (SELECT `user_id` FROM `user` WHERE `email`='" . $email . "')");
+            $cookie_row = $cookie->num_rows;
+
+
+            // Get current datetime
+            $currentDatetime = date('Y-m-d H:i:s');
+
 
 
             if ($rememberme == "true") {
+
+              // Add 30 days to the current datetime
+              $expireDatetime = date('Y-m-d H:i:s', strtotime('+30 days'));
+
+              if ($cookie_row == 1) {
+                Database::iud("UPDATE `cookies` SET `expiration_date` = '" . $expireDatetime . "'");
+              } else {
+                Database::iud("INSERT INTO `cookies`(`user_id`,`expiration_date`,`created_at`) VALUES('" . $data["user_id"] . "', '" . $expireDatetime . "', '" . $currentDatetime . "')");
+              }
+
               $obj->msg = "success";
               $obj->rememberme = "true";
               $obj->user = $data;
@@ -116,6 +135,15 @@ class UserController
               $obj->rememberme = "remember";
               echo json_encode($obj);
             } else {
+
+              $expireDatetime = date('Y-m-d H:i:s', strtotime('+1 days'));
+
+              if ($cookie_row == 1) {
+                Database::iud("UPDATE `cookies` SET `expiration_date` = '" . $expireDatetime . "'");
+              } else {
+                Database::iud("INSERT INTO `cookies`(`user_id`,`expiration_date`,`created_at`) VALUES('" . $data["user_id"] . "', '" . $expireDatetime . "', '" . $currentDatetime . "')");
+              }
+
               $obj->msg = "success";
               $obj->rememberme = "false";
               $obj->user = $data;
@@ -222,12 +250,10 @@ class UserController
 
               $obj->msg = "success";
               echo json_encode($obj);
-
             } else {
               $obj->msg = "Invalid OTP";
               echo json_encode($obj);
             }
-
           } else {
             $obj->msg = "No user found with this email address.";
             echo json_encode($obj);
@@ -242,7 +268,7 @@ class UserController
   }
 
 
-  public function changePassword($request)
+  public function forgotPassword($request)
   {
 
     if ($request !== null) {
@@ -264,7 +290,7 @@ class UserController
         } else if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
           $obj->msg = "Invalid Email Address.";
           echo json_encode($obj);
-        }else if (strlen($password) < 5 || strlen($password) > 20) {
+        } else if (strlen($password) < 5 || strlen($password) > 20) {
           $obj->msg = "Password Must Contain 5 to 20 Characters.";
           echo json_encode($obj);
         } else {
@@ -274,37 +300,177 @@ class UserController
 
           if ($row == 1) {
 
-            Database::iud("UPDATE `user` SET `password`='" . $password . "'");
+            Database::iud("UPDATE `user` SET `password`='" . $password . "' WHERE `email`='" . $email . "' ");
             $obj->msg = "success";
             echo json_encode($obj);
-
           } else {
             $obj->msg = "No user found with this email address.";
             echo json_encode($obj);
           }
-
         }
-
-      }else{
+      } else {
         echo "Error: Invalid POST data";
       }
-
     } else {
       echo "Request faild: Null Data Object";
     }
-
   }
 
 
-  public function getUser()
+  public function changePassword($request)
   {
-    $res = Database::search("SELECT * FROM `admin` WHERE `username` ='eondave' ");
-    $res_num = $res->num_rows;
 
-    if ($res_num == 1) {
-      $user = $res->fetch_assoc();
-      echo "Hello ";
-      echo ($user["username"]);
+    if ($request !== null) {
+
+      $email = $request["email"];
+      $currentPassword = $request["currentPassword"];
+      $newPassword = $request["newPassword"];
+      $username = $request["username"];
+
+      $obj = new stdClass();
+
+      if (!empty($email) && !empty($username)) {
+
+        $rs = Database::search("SELECT * FROM `user` WHERE `email` = '" . $email . "' AND `username`='" . $username . "'");
+        $row = $rs->num_rows;
+
+        if ($row == 1) {
+
+          $user = $rs->fetch_assoc();
+
+          if ($user["password"] === $currentPassword) {
+
+            Database::iud("UPDATE `user` SET `password`='" . $newPassword . "' WHERE `email`='" . $email . "' AND `username` = '" . $username . "'");
+
+            $cookie = Database::search("SELECT * FROM `cookies` WHERE `user_id` IN (SELECT `user_id` FROM `user` WHERE `email`='" . $email . "')");
+            $cookie_row = $cookie->num_rows;
+
+
+            // Get current datetime
+            $currentDatetime = date('Y-m-d H:i:s');
+
+
+
+            if ($cookie_row == 1) {
+
+              $data = $cookie->fetch_assoc();
+
+              $expireDatetime = $data["expiration_date"];
+
+              // Calculate the difference in seconds between the expire datetime and the current datetime
+              $difference = strtotime($expireDatetime) - strtotime($currentDatetime);
+
+              // Convert the difference to days
+              $daysLeft = floor($difference / (60 * 60 * 24)); // Convert seconds to days
+
+
+              $obj->msg = "success";
+              $obj->password = $newPassword;
+              $obj->expire = $daysLeft;
+              echo json_encode($obj);
+            } else {
+              $obj->msg = "success";
+              $obj->password = $newPassword;
+              $obj->expire = 2;
+              echo json_encode($obj);
+            }
+          } else {
+            $obj->msg = "Wrong Password, please try again.";
+            echo json_encode($obj);
+          }
+        } else {
+          $obj->msg = "No user found with this email address.";
+          echo json_encode($obj);
+        }
+      } else {
+        $obj->msg = "Request currepted, Please try again later.";
+        echo json_encode($obj);
+      }
+    } else {
+      echo "Request faild: Null Data Object";
     }
   }
+
+  public function changeEmail($request)
+  {
+
+    if ($request !== null) {
+
+      $email = $request["email"];
+      $newEmail = $request["newEmail"];
+      $username = $request["username"];
+
+      $obj = new stdClass();
+
+      if (!empty($email) && !empty($newEmail) && !empty($username)) {
+
+        if (!strlen($newEmail) > 100) {
+          $obj->msg = "Email Address must Contain LOWER THAN 100 characters.";
+          echo json_encode($obj);
+        } else if (!filter_var($newEmail, FILTER_VALIDATE_EMAIL)) {
+          $obj->msg = "Invalid Email Address.";
+          echo json_encode($obj);
+        } else {
+
+          $rs = Database::search("SELECT * FROM `user` WHERE `email` = '" . $email . "' AND `username`='" . $username . "'");
+          $row = $rs->num_rows;
+
+          if ($row == 1) {
+
+            $user = $rs->fetch_assoc();
+
+            if ($user["email"] === $email) {
+
+              Database::iud("UPDATE `user` SET `email`='" . $newEmail . "' WHERE `email`='" . $email . "' AND `username` = '" . $username . "'");
+
+              $cookie = Database::search("SELECT * FROM `cookies` WHERE `user_id` IN (SELECT `user_id` FROM `user` WHERE `username`='" . $username . "')");
+              $cookie_row = $cookie->num_rows;
+
+
+              // Get current datetime
+              $currentDatetime = date('Y-m-d H:i:s');
+
+              if ($cookie_row == 1) {
+
+                $data = $cookie->fetch_assoc();
+
+                $expireDatetime = $data["expiration_date"];
+
+                // Calculate the difference in seconds between the expire datetime and the current datetime
+                $difference = strtotime($expireDatetime) - strtotime($currentDatetime);
+
+                // Convert the difference to days
+                $daysLeft = floor($difference / (60 * 60 * 24)); // Convert seconds to days
+
+
+                $obj->msg = "success";
+                $obj->email = $newEmail;
+                $obj->expire = $daysLeft;
+                echo json_encode($obj);
+              } else {
+                $obj->msg = "success";
+                $obj->email = $newEmail;
+                $obj->expire = 2;
+                echo json_encode($obj);
+              }
+            } else {
+              $obj->msg = "Wrong email, please try again.";
+              echo json_encode($obj);
+            }
+          } else {
+            $obj->msg = "No user found with this email address.";
+            echo json_encode($obj);
+          }
+        }
+      } else {
+        $obj->msg = "Request currepted, Please try again later.";
+        echo json_encode($obj);
+      }
+    } else {
+      echo "Request faild: Null Data Object";
+    }
+  }
+
+
+  // CLASS END------------>>
 }
