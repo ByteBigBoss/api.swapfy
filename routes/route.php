@@ -49,6 +49,13 @@ class Route {
                if ($requestType === 'POST') {
                 $requestData = json_decode(file_get_contents('php://input'), true);
 
+
+                // Check if files are present in the request
+                if (isset($_FILES) && !empty($_FILES)) {
+                    // Merge files array into request data
+                    $requestData['_FILES'] = $_FILES;
+                }
+                
                 // Call the method and pass the request body data
                 try {
                     $classInstance->$method($requestData);

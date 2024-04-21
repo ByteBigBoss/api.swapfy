@@ -7,6 +7,7 @@ header("Access-Control-Allow-Headers: Content-Type, Authorization");
 
 include "route.php";
 include "../app/controllers/user/UserController.php";
+include "../app/controllers/user/UserProfileController.php";
 
 
 // Define routes ------------------------------>>
@@ -32,7 +33,8 @@ Route::post('/api/change-password', [UserController::class, 'changePassword']);
 //http://localhost/api.swapfy/routes/api/change-email
 Route::post('/api/change-email', [UserController::class, 'changeEmail']);
 
-
+//http://localhost/api.swapfy/routes/api/default-avatars
+Route::get('/api/default-avatars', [UserProfileController::class, 'getDefaultAvatars']);
 
 
 
